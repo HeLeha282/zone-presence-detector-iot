@@ -91,8 +91,8 @@ public class ManagementAssistantController {
   private final String UPLOAD_DIR = "photos/";
 
 
-  @PostMapping("/upload-photo")
-  public ResponseEntity<String> handlePhotoUpload(@RequestBody byte[] photoBytes) {
+  @PostMapping("/upload-photo/{requestId}")
+  public ResponseEntity<String> handlePhotoUpload(@RequestBody byte[] photoBytes, @PathVariable long requestId) {
     try {
       System.out.println("НАЧИНАЕМ ОБРАБОТКУ");
       // 1. Создаем папку, если её нет
@@ -110,7 +110,22 @@ public class ManagementAssistantController {
       Files.write(filePath, photoBytes);
 
       System.out.println("Фотка сохранена: " + filePath.toAbsolutePath());
-      return ResponseEntity.ok("http://192.168.46.132:8080/" + fileName);
+      String url = "http://104.253.25.96:8080/" + fileName;
+
+      DeferredResult<String> output = mqttManager.responseMap.remove(requestId);
+      if (output != null) {
+//              output.setResult(url); // Клиент по HTTP мгновенно получает эту ссылку
+          // Формируем JSON-строку вручную
+
+          String jsonOutput = String.format("{\"url\":\"%s\", \"status\":\"success\"}", url);
+
+          // Отправляем готовую строку. Клиент получит её как тело ответа.
+          output.setResult(jsonOutput);
+      }
+      else {
+        System.out.println("Запрос с ID " + requestId + " не найден (возможно, вышел таймаут)");
+      }
+      return ResponseEntity.ok(url);
 
     } catch (IOException e) {
       e.printStackTrace();
