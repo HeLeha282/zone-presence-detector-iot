@@ -92,7 +92,7 @@ public class ManagementAssistantController {
 
 
   @PostMapping("/upload-photo/{requestId}")
-  public ResponseEntity<String> handlePhotoUpload(@RequestBody byte[] photoBytes, @PathVariable long requestId) {
+  public ResponseEntity<String> handlePhotoUpload(@RequestBody byte[] photoBytes, @PathVariable String requestId) {
     try {
       System.out.println("НАЧИНАЕМ ОБРАБОТКУ");
       // 1. Создаем папку, если её нет
