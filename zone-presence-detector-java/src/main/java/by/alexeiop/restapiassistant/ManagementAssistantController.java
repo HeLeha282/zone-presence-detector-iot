@@ -144,7 +144,7 @@ public class ManagementAssistantController {
       String mqttTopic = "assistants/" + id + "/commands";
 
       // Отправляем JSON в MQTT (просто строку как есть)
-      mqttManager.publish(mqttTopic, jsonBody.getBytes());
+      mqttManager.sendMessage(mqttTopic, jsonBody);
 
       logger.info("✅ Команда отправлена в MQTT топик: {}", mqttTopic);
       return ResponseEntity.ok("Zone command sent to MQTT");
