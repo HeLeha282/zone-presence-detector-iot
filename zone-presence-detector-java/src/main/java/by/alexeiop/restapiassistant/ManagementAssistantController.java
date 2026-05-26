@@ -133,5 +133,26 @@ public class ManagementAssistantController {
     }
   }
 
+  // ========== НОВЫЙ ENDPOINT: Добавить зону ==========
+  @PostMapping("/add-zone/{id}")
+  public ResponseEntity<String> addZone(@PathVariable("id") long id,
+                                        @RequestBody String jsonBody) {
+    try {
+      logger.info("📍 Получена команда add_zone для устройства {}: {}", id, jsonBody);
+
+      // Формируем MQTT топик: assistants/{id}/commands
+      String mqttTopic = "assistants/" + id + "/commands";
+
+      // Отправляем JSON в MQTT (просто строку как есть)
+      mqttManager.publish(mqttTopic, jsonBody.getBytes());
+
+      logger.info("✅ Команда отправлена в MQTT топик: {}", mqttTopic);
+      return ResponseEntity.ok("Zone command sent to MQTT");
+
+    } catch (Exception e) {
+      logger.error("❌ Ошибка при отправке команды в MQTT: {}", e.getMessage());
+      return ResponseEntity.status(500).body("Error: " + e.getMessage());
+    }
+  }
 
 }
