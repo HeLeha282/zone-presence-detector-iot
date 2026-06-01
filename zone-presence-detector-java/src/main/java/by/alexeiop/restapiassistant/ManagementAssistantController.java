@@ -33,6 +33,11 @@ public class ManagementAssistantController {
     this.mqttManager = mqttManager;
   }
 
+  @GetMapping("/ping")
+  public ResponseEntity<String> ping(){
+    return new ResponseEntity<>("Всё топчик работает" ,HttpStatus.OK);
+  }
+
   @GetMapping(value = "/takePhoto/{id}", produces = "application/json")
 // 1. Метод должен возвращать DeferredResult напрямую
   public DeferredResult<String> takePhoto(@PathVariable("id") long id) {
