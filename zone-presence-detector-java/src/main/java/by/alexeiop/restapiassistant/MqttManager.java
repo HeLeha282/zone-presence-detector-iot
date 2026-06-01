@@ -21,7 +21,7 @@ public class MqttManager {
   // Готовый инструмент для парсинга JSON
   private final ObjectMapper objectMapper = new ObjectMapper();
 
-  private static final String brokerUrl = "tcp://104.252.89.123"; // Адрес вашего Mosquitto
+  private static final String brokerUrl = "tcp://104.253.25.96"; // Адрес вашего Mosquitto
   private static final String clientId = "JavaSampleClient";
   MqttClient client;
 
