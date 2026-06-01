@@ -20,7 +20,7 @@ public class ManagementAssistantService {
     logger.info("execute takePhoto");
     mqttManager.sendMessage(
         String.format("assistants/%d/commands", id),
-        String.format("{command: \"take_photo\",\nrequestId: %s\n}", requestId));
+        String.format("{\"command\": \"take_photo\",\n\"requestId\": \"%s\"\n}", requestId));
     return "Фотка доступна по ссылке: https://chat.qwen.ai/";
   }
 
