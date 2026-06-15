@@ -17,7 +17,7 @@ public class MqttManager {
   public final Map<String, DeferredResult<String>> responseMap = new ConcurrentHashMap<>();
   private final ObjectMapper objectMapper = new ObjectMapper();
 
-  private static final String BROKER_URL = "tcp://104.253.25.96";
+  private static final String BROKER_URL = "tcp://45.39.190.176";
   private static final String CLIENT_ID  = "JavaSampleClient";
 
   // Топик подписки на все ответы от устройств:
