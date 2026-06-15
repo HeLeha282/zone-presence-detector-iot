@@ -115,7 +115,7 @@ public class ManagementAssistantController {
       Files.write(filePath, photoBytes);
 
       System.out.println("Фотка сохранена: " + filePath.toAbsolutePath());
-      String url = "http://104.253.25.96:8080/" + fileName;
+      String url = "http://45.39.190.176:8080/" + fileName;
 
       DeferredResult<String> output = mqttManager.responseMap.remove(requestId);
       if (output != null) {
