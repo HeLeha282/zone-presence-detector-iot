@@ -2,7 +2,6 @@ package by.alexeiop.restapiassistant;
 
 import org.eclipse.paho.client.mqttv3.*;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.async.DeferredResult;
@@ -12,88 +11,76 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-
 @Component
 public class MqttManager {
-  // Карта для связи: CorrelationId -> Ожидающий ответ
-  public final Map<String, DeferredResult<String>> responseMap = new ConcurrentHashMap<>();
 
-  // Готовый инструмент для парсинга JSON
+  public final Map<String, DeferredResult<String>> responseMap = new ConcurrentHashMap<>();
   private final ObjectMapper objectMapper = new ObjectMapper();
 
-  private static final String brokerUrl = "tcp://104.253.25.96"; // Адрес вашего Mosquitto
-  private static final String clientId = "JavaSampleClient";
+  private static final String BROKER_URL = "tcp://104.253.25.96";
+  private static final String CLIENT_ID  = "JavaSampleClient";
+
+  // Топик подписки на все ответы от устройств:
+  //   assistants/+/response/# — "+" = любой deviceId, "#" = любая команда
+  private static final String RESPONSE_TOPIC = "assistants/+/response/#";
+
   MqttClient client;
 
-  MqttManager(){}
+  MqttManager() {}
 
   @EventListener(ApplicationReadyEvent.class)
-  public void init(){
+  public void init() {
     try {
-      client = new MqttClient(brokerUrl, clientId);
-      // Настройка параметров подключения
+      client = new MqttClient(BROKER_URL, CLIENT_ID);
+
       MqttConnectOptions options = new MqttConnectOptions();
       options.setCleanSession(true);
-//      options.setUserName("your_user"); // Опционально
-//      options.setPassword("your_password".toCharArray()); // Опционально
 
-//      message.setRetained(true);
+      client.setCallback(new MqttCallback() {
+
+        @Override
+        public void connectionLost(Throwable cause) {
+          System.err.println("MQTT соединение потеряно: " + cause.getMessage());
+        }
+
+        @Override
+        public void messageArrived(String topic, MqttMessage message) {
+          String payload = new String(message.getPayload());
+          System.out.println("MQTT получено [" + topic + "]: " + payload);
+
+          try {
+            JsonNode json = objectMapper.readTree(payload);
+            JsonNode ridNode = json.get("requestId");
+            if (ridNode == null || ridNode.isNull()) return;
+
+            String requestId = ridNode.asText();
+            DeferredResult<String> pending = responseMap.remove(requestId);
+
+            if (pending != null) {
+              pending.setResult(payload);
+            } else {
+              System.out.println("requestId " + requestId + " не найден (уже отработан или таймаут)");
+            }
+          } catch (Exception e) {
+            System.err.println("Ошибка парсинга MQTT ответа: " + e.getMessage());
+          }
+        }
+
+        @Override
+        public void deliveryComplete(IMqttDeliveryToken token) {}
+      });
 
       System.out.println("Подключение к брокеру...");
-//      client.setCallback(new MqttCallback() {
-//
-//        @Override
-//        public void connectionLost(Throwable cause) { //Called when the client lost the connection to the broker
-//        }
-//
-//        @Override
-//        public void messageArrived(String topic, MqttMessage message) throws Exception {
-//          String payload = new String(message.getPayload());
-//          System.out.println("MQTT получено: " + payload);
-//
-//          try {
-//            // Парсим JSON один раз
-//            JsonNode jsonResponse = objectMapper.readTree(payload);
-//
-//            // Извлекаем данные по именам полей
-//            String requestId = jsonResponse.get("requestId").asText();
-//            String url = jsonResponse.get("url").asText();
-//
-//            System.out.println("ВОт такой url подсе парсинга:" + url);
-//
-//            // Ищем зависший HTTP запрос в нашей карте
-//            DeferredResult<String> output = responseMap.remove(requestId);
-//
-//            if (output != null) {
-////              output.setResult(url); // Клиент по HTTP мгновенно получает эту ссылку
-//                // Формируем JSON-строку вручную
-//                String jsonOutput = String.format("{\"url\":\"%s\", \"status\":\"success\"}", url);
-//
-//                // Отправляем готовую строку. Клиент получит её как тело ответа.
-//                output.setResult(jsonOutput);
-//            } else {
-//              System.out.println("Запрос с ID " + requestId + " не найден (возможно, вышел таймаут)");
-//            }
-//          } catch (Exception e) {
-//            System.err.println("Ошибка парсинга сообщения: " + e.getMessage());
-//          }
-//        }
-//
-//        @Override
-//        public void deliveryComplete(IMqttDeliveryToken token) {//Called when a outgoing publish is complete
-//        }
-//      });
-
       client.connect(options);
-//      client.subscribe("hello", 2);
+      client.subscribe(RESPONSE_TOPIC, 1);
+      System.out.println("Клиент подключен: " + client.isConnected() + ", подписка: " + RESPONSE_TOPIC);
 
-      System.out.println("Клиент подключен: " + client.isConnected());
     } catch (Exception e) {
       e.printStackTrace();
     }
   }
 
-  public void sendMessage(String topic, String content){
+  public void sendMessage(String topic, String content) {
     MqttMessage message = new MqttMessage(content.getBytes());
     message.setQos(2);
     try {
@@ -102,27 +89,4 @@ public class MqttManager {
       throw new RuntimeException(e);
     }
   }
-
-//  private String parseId(String payload) {
-//    try {
-//      // Превращаем строку в дерево JSON
-//      JsonNode jsonNode = objectMapper.readTree(payload);
-//      // Достаем значение поля "requestId"
-//      return jsonNode.get("requestId").asText();
-//    } catch (Exception e) {
-//      System.err.println("Не удалось найти requestId в JSON: " + payload);
-//      return null;
-//    }
-//  }
-//
-//  private String parseUrl(String payload) {
-//    try {
-//      JsonNode jsonNode = objectMapper.readTree(payload);
-//      // Достаем значение поля "url" (или "link" — как назовете на устройстве)
-//      return jsonNode.get("url").asText();
-//    } catch (Exception e) {
-//      return "ошибка-ссылки";
-//    }
-//  }
-
 }
